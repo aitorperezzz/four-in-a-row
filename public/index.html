@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Four in a row</title>
+
+    <!--Link the CSS stylesheet-->
+    <link rel="stylesheet" type="text/css" href="style.css">
+
+    <!--Load the p5js library, given by my server-->
+    <script src="p5.min.js"></script>
+    <script src="addons/p5.dom.min.js"></script>
+    <script src="addons/p5.sound.min.js"></script>
+
+    <!--Load the client application-->
+    <script src="sketch.js"></script>
+
+    <!--Load socket.io client library using CDN-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js"></script>
+  </head>
+  
+  <body>
+    <div id="buttonArea">
+      <button onclick="playerReady()" >Ready to play!</button>
+    </div>
+  </body>
+</html>
