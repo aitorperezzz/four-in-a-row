@@ -1,86 +1,63 @@
 // Declare the socket variables.
 let socket;
 let idSocket;
+let initialized = false;
 
-// Declare the size of the canvas.
-let canvasx = 400;
-let canvasy = 500;
+// Declare an object to store lengths.
+let sizes = {};
 
-// Declare some global variables for the game.
+// Declare some global variables for the game logic.
 let mode = 'waiting';
 let discs = [];
 let players = [];
-let sizes;
-
-function calculateSizes() {
-  // Calculates relevant sizes for the game
-  // and stores them in the 'sizes' object.
-  let xsize = Math.min(canvasx, canvasy - 100) * 6 / 7;
-  let size = xsize / 7;
-  let ysize = size * 6;
-  let initialx = (canvasx - xsize) / 2;
-  let initialy = 100 + (canvasy - 100 - ysize) / 2;
-  let boardx = canvasx / 2;
-  let boardy = 50;
-  sizes = {
-    xsize: xsize,
-    ysize: ysize,
-    size: size,
-    initialx: initialx,
-    initialy: initialy,
-    boardx: boardx,
-    boardy: boardy
-  };
-}
-
-calculateSizes();
+let turn;
+let idPlayer = 0;
+let colors;
+let winner;
 
 function setup() {
-  createCanvas(canvasx, canvasy);
-  background(0);
-
   // Connect the socket to the server.
   socket = io.connect('http://localhost:8080');
 
+  // Create the colors array.
+  colors = [color(255, 0, 0), color(255, 255, 102)]
+
   // Declare the functions that will handle the different events.
   socket.on('connect', connect);
+  socket.on('initialize', initialize);
   socket.on('addPlayer', addPlayer);
-  socket.on('beginGame', beginGame);
+  socket.on('updateMode', updateMode);
   socket.on('addDisc', addDisc);
+  socket.on('winner', newWinner);
 }
 
 function draw() {
   // Draw a background.
   background(0);
 
-  if (mode == 'playing') {
-    // Draw the vertical lines.
-    strokeWeight(2);
-    for (let i = 0; i < 8; i++) {
-      stroke(255);
-      line(sizes.initialx + i * sizes.size, sizes.initialy, sizes.initialx + i * sizes.size, sizes.initialy + sizes.ysize);
+  if (initialized) {
+    if (mode == 'playing' || mode == 'winner') {
+      // Draw the vertical lines.
+      strokeWeight(2);
+      for (let i = 0; i < 8; i++) {
+        stroke(255);
+        line(sizes.initialx + i * sizes.size, sizes.initialy, sizes.initialx + i * sizes.size, sizes.initialy + sizes.ysize);
+      }
+
+      // Draw the bottom line.
+      line(sizes.initialx, sizes.initialy + sizes.ysize, sizes.initialx + sizes.xsize, sizes.initialy + sizes.ysize);
+
+      // Draw the discs.
+      for (let k = 0; k < discs.length; k++) {
+        fill(colors[discs[k].idPlayer - 1]);
+        noStroke();
+        ellipse(discs[k].x, discs[k].y, sizes.rad, sizes.rad);
+      }
     }
 
-    // Draw the bottom line.
-    line(sizes.initialx, sizes.initialy + sizes.ysize, sizes.initialx + sizes.xsize, sizes.initialy + sizes.ysize);
-
-    // Draw the discs.
-    for (let k = 0; k < discs.length; k++) {
-      if (discs[k].idPlayer == 1) {
-        // Player 1 is red.
-        fill(255, 0, 0);
-      }
-      else if (discs[k].idPlayer == 2) {
-        // Player 2 is yellow.
-        fill(255, 255, 102);
-      }
-      noStroke();
-      ellipse(discs[k].x, discs[k].y, 25, 25);
-    }
+    // Display the message at the top.
+    displayMessage();
   }
-
-  // Display the message.
-  displayMessage();
 }
 
 function connect() {
@@ -89,53 +66,159 @@ function connect() {
   idSocket = socket.id.slice();
 }
 
+function initialize(data) {
+  // Receives the basic game data from master.
+  sizes = data;
+  sizes.boardx = sizes.canvasx / 2;
+  sizes.boardytop = sizes.boardsize / 3;
+  sizes.boardybot = sizes.boardsize * 2 / 3;
+  sizes.rad = sizes.size * 3 / 4;
+  initialized = true;
+  createCanvas(sizes.canvasx, sizes.canvasy);
+  background(0);
+}
+
 function addPlayer(data) {
   // A new player comes as information, so update.
   console.log('Updating players');
   players.push(data);
-  console.log(players);
+
+  // Update my idPlayer if I'm one of the players.
+  for (let k = 0; k < players.length; k++) {
+    if (players[k].idSocket == idSocket) {
+      // I am this player.
+      idPlayer = players[k].idPlayer;
+      return;
+    }
+  }
 }
 
-function beginGame(data) {
-  mode = 'playing';
+function updateMode(data) {
+  console.log('Changing to ' + data.mode + ' mode');
+  switch (data.mode) {
+    case 'playing':
+      mode = 'playing';
+      turn = 1;
+      break;
+    case 'waiting':
+      reset();
+  }
+}
+
+function reset() {
+  // Resets all values to the default at the beginning.
+  idPlayer = 0;
+  players = [];
+  discs = [];
+  mode = 'waiting';
+  turn = 1;
 }
 
 function addDisc(data) {
   // Receives a new disc and adds it to the list.
   discs.push(data);
-  console.log(discs);
+
+  // Update the turn.
+  turn = data.idPlayer == 1 ? 2 : 1;
+}
+
+function newWinner(data) {
+  console.log('Player ' + data.idPlayer + ' is the winner!!');
+  winner = data.idPlayer;
+  mode = 'winner';
 }
 
 function displayMessage() {
-  fill(255);
-  noStroke();
-  textSize(25);
-  textAlign(CENTER, CENTER);
+  // Diplay the messages on the board.
   switch (mode) {
     case 'waiting':
-      text('Waiting for players...', sizes.boardx, sizes.boardy);
+      fill(255);
+      noStroke();
+      textSize(25);
+      textAlign(CENTER, CENTER);
+      text('Waiting for players...', sizes.boardx, sizes.boardytop);
       break;
     case 'playing':
-      text('Playing', sizes.boardx, sizes.boardy);
+      // Display the turns.
+      fill(255);
+      noStroke();
+      textSize(25);
+      textAlign(CENTER, CENTER);
+      if (myTurn()) {
+        text('Playing. Your turn', sizes.boardx, sizes.boardytop);
+      }
+      else {
+        text('Playing. Turn of player ' + turn, sizes.boardx, sizes.boardytop);
+      }
+
+      // Display the colors of the players.
+      fill(colors[idPlayer - 1]);
+      noStroke();
+      textSize(20);
+      textAlign(CENTER, CENTER);
+      text('You are player ' + idPlayer, sizes.boardx, sizes.boardybot);
+      break;
+    case 'winner':
+      fill(255);
+      noStroke();
+      textSize(25);
+      textAlign(CENTER, CENTER);
+      text('Player ' + winner + ' is the winner!', sizes.boardx, sizes.boardytop);
+
+      // Display the colors of the players.
+      fill(colors[idPlayer - 1]);
+      noStroke();
+      textSize(20);
+      textAlign(CENTER, CENTER);
+      text('You are player ' + idPlayer, sizes.boardx, sizes.boardybot);
+      break;
   }
+}
+
+function myTurn() {
+  // Decides if it is this client's turn.
+  return idPlayer == turn;
 }
 
 
 function mousePressed() {
-  console.log('Sending a click to the server');
-  let data = {
-    idSocket: idSocket,
-    x: mouseX,
-    y: mouseY
-  };
-  socket.emit('clicked',  data);
+  // Only send the click if it was inside the canvas.
+  if (inside(mouseX, mouseY)) {
+    console.log('Sending click to the server');
+    let data = {
+      idSocket: idSocket,
+      x: mouseX,
+      y: mouseY
+    };
+    socket.emit('clicked', data);
+  }
+  else {
+    console.log('Click outside the canvas. Not sending');
+  }
 }
 
-function clientReady() {
-  // This function is triggered with the HTML button.
-  console.log('Sending a ready request');
+function inside(mx, my) {
+  // Receives a mouse click and decides if it was inside the canvas or not.
+  let xtrue = 0 < mx && mx < sizes.canvasx;
+  let ytrue = 0 < my && my < sizes.canvasy;
+  return xtrue && ytrue;
+}
+
+// FUNCTIONS FOR BUTTONS.
+function ready() {
+  // This function is triggered with the ready button.
+  console.log('Client presses ready button');
   let data = {
     idSocket: idSocket
   };
   socket.emit('ready', data);
+}
+
+function leave() {
+  // Function triggered with the leave button.
+  console.log('Client presses leave button');
+  let data = {
+    idSocket: idSocket
+  };
+  socket.emit('leave', data);
 }

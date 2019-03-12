@@ -2,7 +2,9 @@
 
 // Import the Master class to use it here.
 let Master = require('./master.js');
+// Initialize a master.
 let master = new Master();
+console.log('Master created');
 
 // CREATE THE SERVER.
 console.log('Creating the server...');
@@ -24,9 +26,8 @@ console.log('Server is running!');
 // Load the socket.io module.
 let socket = require('socket.io');
 
-// Create input output functionality for the server and export it.
+// Create input output functionality for the server.
 let io = socket(server);
-//module.exports = io;
 
 
 // SERVER CODE.
@@ -35,6 +36,7 @@ let io = socket(server);
 io.sockets.on('connection', newClient);
 function newClient(socket) {
   console.log('Accepting a new client with socket id: ' + socket.id);
+  io.emit('initialize', master.clientData);
 
   // Handle when a client is ready to play the game.
   socket.on('ready', ready);
@@ -42,16 +44,22 @@ function newClient(socket) {
     master.ready(data);
   }
 
-  // Handle a click from a client.
+  // Handle a click by a client on the canvas.
   socket.on('clicked', clicked);
   function clicked(data) {
     master.clicked(data);
   }
+
+  // Handle a click on the leave button.
+  socket.on('leave', leave);
+  function leave(data) {
+    master.leave(data);
+  }
 }
 
-// This function receives calls from master.
+// This function is called by master to send information to clients.
 function send(command, data) {
-  console.log('Master is sending type ' + command + ' information');
+  console.log('Master: sending ' + command + ' information');
   io.emit(command, data);
 }
 // Export this function for the Master class to use.
