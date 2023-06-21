@@ -74,7 +74,8 @@ function initialize(data) {
     sizes.boardybot = sizes.boardsize * 2 / 3;
     sizes.rad = sizes.size * 3 / 4;
     initialized = true;
-    createCanvas(sizes.canvasx, sizes.canvasy);
+    let canvas = createCanvas(sizes.canvasx, sizes.canvasy);
+    canvas.parent('sketch-holder');
     background(0);
 }
 

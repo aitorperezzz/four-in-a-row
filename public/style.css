@@ -1,12 +1,43 @@
-/* CSS style for the client application */
+/* CSS code for the entire website */
 body {
-    padding: 0;
+    background-color: #36454F;
+    /* Soft dark blue background color */
     margin: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
 }
 
-#buttonArea {
-    height: 50px;
+/* CSS code for the centered div at the top */
+#button-area {
     display: flex;
+    justify-content: center;
     align-items: center;
-    justify-content: left;
+    padding: 20px;
+}
+
+/* CSS code for the buttons inside the top div */
+#button-area .button {
+    flex: 1;
+    margin: 10px;
+    padding: 10px;
+    max-width: 200px;
+    /* Maximum width of 200 pixels */
+    background-color: #f2f2f2;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+/* CSS code for the div below the top div */
+#sketch-holder {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    /* Align content to the top */
+    align-items: center;
+    flex-grow: 1;
+    background-color: #36454F;
+    /* Soft dark blue background color */
 }
