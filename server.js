@@ -35,32 +35,32 @@ let io = socket(server);
 // Handle new connections.
 io.sockets.on('connection', newClient);
 function newClient(socket) {
-  console.log('Accepting a new client with socket id: ' + socket.id);
-  io.emit('initialize', master.clientData);
+    console.log('Accepting a new client with socket id: ' + socket.id);
+    io.emit('initialize', master.clientData);
 
-  // Handle when a client is ready to play the game.
-  socket.on('ready', ready);
-  function ready(data) {
-    master.ready(data);
-  }
+    // Handle when a client is ready to play the game.
+    socket.on('ready', ready);
+    function ready(data) {
+        master.ready(data);
+    }
 
-  // Handle a click by a client on the canvas.
-  socket.on('clicked', clicked);
-  function clicked(data) {
-    master.clicked(data);
-  }
+    // Handle a click by a client on the canvas.
+    socket.on('clicked', clicked);
+    function clicked(data) {
+        master.clicked(data);
+    }
 
-  // Handle a click on the leave button.
-  socket.on('leave', leave);
-  function leave(data) {
-    master.leave(data);
-  }
+    // Handle a click on the leave button.
+    socket.on('leave', leave);
+    function leave(data) {
+        master.leave(data);
+    }
 }
 
 // This function is called by master to send information to clients.
 function send(command, data) {
-  console.log('Master: sending ' + command + ' information');
-  io.emit(command, data);
+    console.log('Master: sending ' + command + ' information');
+    io.emit(command, data);
 }
 // Export this function for the Master class to use.
 module.exports.send = send;

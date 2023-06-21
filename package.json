@@ -1,16 +1,15 @@
 {
-  "name": "four-in-a-row",
-  "version": "1.0.0",
-  "description": "Simple multiplayer game: four in a row",
-  "main": "server.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
-  },
-  "author": "Aitor Perez",
-  "license": "ISC",
-  "dependencies": {
-    "express": "^4.16.4",
-    "socket.io": "^2.2.0"
-  }
+    "name": "four-in-a-row",
+    "version": "1.0.0",
+    "description": "Simple multiplayer game: four in a row",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js"
+    },
+    "author": "Aitor Perez",
+    "license": "ISC",
+    "dependencies": {
+        "express": "^4.18.2",
+        "socket.io": "^4.6.2"
+    }
 }

@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="">
-  <head>
+
+<head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -9,22 +10,21 @@
     <!--Link the CSS stylesheet-->
     <link rel="stylesheet" type="text/css" href="style.css">
 
-    <!--Load the p5js library, given by my server-->
-    <script src="p5.min.js"></script>
-    <script src="addons/p5.dom.min.js"></script>
-    <script src="addons/p5.sound.min.js"></script>
+    <!--Load the p5js library given as CDN-->
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.6.0/lib/p5.js"></script>
 
     <!--Load the client application-->
     <script src="sketch.js"></script>
 
-    <!--Load socket.io client library using CDN-->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js"></script>
-  </head>
+    <!--Load socket.io client library as provided by the server-->
+    <script src="/socket.io/socket.io.js"></script>
+</head>
 
-  <body>
+<body>
     <div id="buttonArea">
-      <button onclick="ready()" >Ready to play!</button>
-      <button onclick="leave()" >Leave room</button>
+        <button onclick="ready()">Ready to play!</button>
+        <button onclick="leave()">Leave room</button>
     </div>
-  </body>
+</body>
+
 </html>

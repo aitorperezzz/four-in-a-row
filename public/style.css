@@ -1,12 +1,12 @@
 /* CSS style for the client application */
 body {
-  padding: 0;
-  margin: 0;
+    padding: 0;
+    margin: 0;
 }
 
 #buttonArea {
-  height: 50px;
-  display: flex;
-  align-items: center;
-  justify-content: left;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: left;
 }
