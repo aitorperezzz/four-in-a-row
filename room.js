@@ -25,9 +25,9 @@ module.exports = class Room {
     register(socketId) {
         console.log('Registering socket id ' + socketId);
         if (!this.isFull()) {
-            // The player id will be directly related to the position in which
-            // this player was registered
-            let playerId = this.getSocketIds().length + 1;
+            // Decide the player id for this client
+            let playerId = this.getAvailableId();
+            // Add it to the dictionary
             this.playerIds[socketId] = playerId;
             console.log('Socket id ' + socketId + ' has been registered');
 
@@ -129,5 +129,16 @@ module.exports = class Room {
         this.getSocketIds().forEach(function (socketId) {
             io.to(socketId).emit(command, data);
         });
+    }
+
+    // Assign an id that is available
+    getAvailableId() {
+        let playerIdsInUse = new Set(Object.values(this.playerIds));
+        for (let id = 1; id <= 2; id++) {
+            if (!playerIdsInUse.has(id)) {
+                return id;
+            }
+        }
+        return null;
     }
 }

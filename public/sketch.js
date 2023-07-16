@@ -37,7 +37,6 @@ function setup() {
     socket.on('updateTurn', updateTurn);
     socket.on('addDisc', addDisc);
     socket.on('winner', winner);
-    socket.on('leave', leave);
 }
 
 function draw() {
@@ -93,6 +92,7 @@ function wait() {
     mode = 'wait';
     buttonManager.removeAllButtons();
     buttonManager.appendButton('leave');
+    resetGame();
 }
 
 function begin(data) {
@@ -112,12 +112,6 @@ function updateTurn(data) {
     turn = data.turn;
 }
 
-function resetGame() {
-    discs = [];
-    mode = 'wait';
-    turn = 1;
-}
-
 function addDisc(data) {
     // Receives a new disc and adds it to the list.
     discs.push(data);
@@ -132,10 +126,11 @@ function winner(data) {
     mode = 'winner';
 }
 
-function leave() {
-    buttonManager.removeAllButtons();
-    buttonManager.appendButton('ready');
-    mode = 'init';
+function resetGame() {
+    discs = [];
+    playerId = undefined;
+    turn = undefined;
+    winnerId = undefined;
 }
 
 function displayMessage() {
@@ -255,6 +250,9 @@ function leaveHandler() {
     };
     socket.emit('leave', data);
 
-    // Client has to return to the original state
-    leave();
+    // Client has to return to the init mode
+    mode = 'init';
+    buttonManager.removeAllButtons();
+    buttonManager.appendButton('ready');
+    resetGame();
 }
