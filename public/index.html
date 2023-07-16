@@ -14,6 +14,7 @@
     <script src="https://cdn.jsdelivr.net/npm/p5@1.6.0/lib/p5.js"></script>
 
     <!--Load the client application-->
+    <script src="buttonManager.js"></script>
     <script src="sketch.js"></script>
 
     <!--Load socket.io client library as provided by the server-->
@@ -22,8 +23,7 @@
 
 <body>
     <div id="button-area">
-        <button class="button" onclick="ready()">Ready to play!</button>
-        <button class="button" onclick="leave()">Leave room</button>
+        <button class="button" onclick="readyHandler()">Play</button>
     </div>
     <div id="sketch-holder">
     </div>

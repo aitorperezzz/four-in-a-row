@@ -1,34 +1,43 @@
 // Declare the socket variables.
 let socket;
-let idSocket;
+let socketId;
 let initialized = false;
 
 // Declare an object to store lengths.
 let sizes = {};
 
 // Declare some global variables for the game logic.
-let mode = 'waiting';
+let mode = undefined;
 let discs = [];
-let players = [];
-let turn;
-let idPlayer = 0;
-let colors;
-let winner;
+let playerId = undefined;
+let turn = undefined;
+let colors = undefined;
+let winnerId = undefined;
+
+let buttonManager = undefined;
 
 function setup() {
     // Connect the socket to the server.
     socket = io();
 
+    // Create the button manager and register some buttons
+    buttonManager = new ButtonManager();
+    buttonManager.register('ready', 'Play', readyHandler);
+    buttonManager.register('leave', 'Leave room', leaveHandler);
+    buttonManager.register('reset', 'Reset game', resetHandler);
+
     // Create the colors array.
-    colors = [color(255, 0, 0), color(255, 255, 102)]
+    colors = [color(255, 0, 0), color(255, 255, 102)];
 
     // Declare the functions that will handle the different events.
     socket.on('connect', connect);
     socket.on('initialize', initialize);
-    socket.on('addPlayer', addPlayer);
-    socket.on('updateMode', updateMode);
+    socket.on('wait', wait);
+    socket.on('begin', begin);
+    socket.on('updateTurn', updateTurn);
     socket.on('addDisc', addDisc);
-    socket.on('winner', newWinner);
+    socket.on('winner', winner);
+    socket.on('leave', leave);
 }
 
 function draw() {
@@ -36,7 +45,7 @@ function draw() {
     background(0);
 
     if (initialized) {
-        if (mode == 'playing' || mode == 'winner') {
+        if (mode == 'play' || mode == 'winner') {
             // Draw the vertical lines.
             strokeWeight(2);
             for (let i = 0; i < 8; i++) {
@@ -49,7 +58,7 @@ function draw() {
 
             // Draw the discs.
             for (let k = 0; k < discs.length; k++) {
-                fill(colors[discs[k].idPlayer - 1]);
+                fill(colors[discs[k].playerId - 1]);
                 noStroke();
                 ellipse(discs[k].x, discs[k].y, sizes.rad, sizes.rad);
             }
@@ -61,9 +70,9 @@ function draw() {
 }
 
 function connect() {
-    console.log('Client is now connected with id: ' + socket.id);
+    console.log('Client connected with socket id ' + socket.id);
     // Keep a copy of the id.
-    idSocket = socket.id.slice();
+    socketId = socket.id.slice();
 }
 
 function initialize(data) {
@@ -77,41 +86,35 @@ function initialize(data) {
     let canvas = createCanvas(sizes.canvasx, sizes.canvasy);
     canvas.parent('sketch-holder');
     background(0);
+    mode = 'init';
 }
 
-function addPlayer(data) {
-    // A new player comes as information, so update.
-    console.log('Updating players');
-    players.push(data);
-
-    // Update my idPlayer if I'm one of the players.
-    for (let k = 0; k < players.length; k++) {
-        if (players[k].idSocket == idSocket) {
-            // I am this player.
-            idPlayer = players[k].idPlayer;
-            return;
-        }
-    }
+function wait() {
+    mode = 'wait';
+    buttonManager.removeAllButtons();
+    buttonManager.appendButton('leave');
 }
 
-function updateMode(data) {
-    console.log('Changing to ' + data.mode + ' mode');
-    switch (data.mode) {
-        case 'playing':
-            mode = 'playing';
-            turn = 1;
-            break;
-        case 'waiting':
-            resetGame();
-    }
+function begin(data) {
+    // The game starts, I will find here my id and the current turn
+    console.log('Game begins');
+    playerId = data.playerId;
+    turn = data.turn;
+    console.log('I am player ' + playerId + ' and the turn is ' + turn);
+    mode = 'play';
+    buttonManager.removeAllButtons();
+    buttonManager.appendButton('leave');
+    buttonManager.appendButton('reset');
+}
+
+function updateTurn(data) {
+    console.log('Server updates the turn');
+    turn = data.turn;
 }
 
 function resetGame() {
-    // Resets all values to the default at the beginning.
-    idPlayer = 0;
-    players = [];
     discs = [];
-    mode = 'waiting';
+    mode = 'wait';
     turn = 1;
 }
 
@@ -120,32 +123,45 @@ function addDisc(data) {
     discs.push(data);
 
     // Update the turn.
-    turn = data.idPlayer == 1 ? 2 : 1;
+    turn = data.playerId == 1 ? 2 : 1;
 }
 
-function newWinner(data) {
-    console.log('Player ' + data.idPlayer + ' is the winner!!');
-    winner = data.idPlayer;
+function winner(data) {
+    console.log('Player ' + data.playerId + ' is the winner!!');
+    winnerId = data.playerId;
     mode = 'winner';
+}
+
+function leave() {
+    buttonManager.removeAllButtons();
+    buttonManager.appendButton('ready');
+    mode = 'init';
 }
 
 function displayMessage() {
     // Diplay the messages on the board.
     switch (mode) {
-        case 'waiting':
+        case 'init':
             fill(255);
             noStroke();
             textSize(25);
             textAlign(CENTER, CENTER);
-            text('Waiting for players...', sizes.boardx, sizes.boardytop);
+            text('Press play to enter a room and play', sizes.boardx, sizes.boardytop);
             break;
-        case 'playing':
+        case 'wait':
+            fill(255);
+            noStroke();
+            textSize(25);
+            textAlign(CENTER, CENTER);
+            text('Waiting for another player', sizes.boardx, sizes.boardytop);
+            break;
+        case 'play':
             // Display the turns.
             fill(255);
             noStroke();
             textSize(25);
             textAlign(CENTER, CENTER);
-            if (myTurn()) {
+            if (isMyTurn()) {
                 text('Playing. Your turn', sizes.boardx, sizes.boardytop);
             }
             else {
@@ -153,49 +169,55 @@ function displayMessage() {
             }
 
             // Display the colors of the players.
-            fill(colors[idPlayer - 1]);
+            fill(colors[playerId - 1]);
             noStroke();
             textSize(20);
             textAlign(CENTER, CENTER);
-            text('You are player ' + idPlayer, sizes.boardx, sizes.boardybot);
+            text('You are player ' + playerId, sizes.boardx, sizes.boardybot);
             break;
         case 'winner':
             fill(255);
             noStroke();
             textSize(25);
             textAlign(CENTER, CENTER);
-            text('Player ' + winner + ' is the winner!', sizes.boardx, sizes.boardytop);
+            text('Player ' + winnerId + ' is the winner!', sizes.boardx, sizes.boardytop);
 
             // Display the colors of the players.
-            fill(colors[idPlayer - 1]);
+            fill(colors[playerId - 1]);
             noStroke();
             textSize(20);
             textAlign(CENTER, CENTER);
-            text('You are player ' + idPlayer, sizes.boardx, sizes.boardybot);
+            text('You are player ' + playerId, sizes.boardx, sizes.boardybot);
             break;
     }
 }
 
-function myTurn() {
+function isMyTurn() {
     // Decides if it is this client's turn.
-    return idPlayer == turn;
+    return playerId == turn;
 }
 
 
 function mousePressed() {
-    // Only send the click if it was inside the canvas.
-    if (inside(mouseX, mouseY)) {
-        console.log('Sending click to the server');
-        let data = {
-            idSocket: idSocket,
-            x: mouseX,
-            y: mouseY
-        };
-        socket.emit('clicked', data);
+    // Only if it's my turn
+    if (!isMyTurn()) {
+        console.log('Ignoring click: not my turn');
+        return;
     }
-    else {
-        console.log('Click outside the canvas. Not sending');
+
+    // Only if playing
+    if (mode != 'play') {
+        console.log('Ignoring click: not playing');
+        return;
     }
+
+    // Only if it's inside the canvas
+    if (!inside(mouseX, mouseY)) {
+        console.log('Ignoring click: outside the canvas');
+        return;
+    }
+
+    socket.emit('clicked', { socketId: socketId, x: mouseX, y: mouseY });
 }
 
 function inside(mx, my) {
@@ -205,21 +227,34 @@ function inside(mx, my) {
     return xtrue && ytrue;
 }
 
-// FUNCTIONS FOR BUTTONS.
-function ready() {
+// Functions for buttons
+
+function readyHandler() {
     // This function is triggered with the ready button.
-    console.log('Client presses ready button');
+    console.log('Client wants to play');
     let data = {
-        idSocket: idSocket
+        socketId: socketId
     };
     socket.emit('ready', data);
 }
 
-function leave() {
-    // Function triggered with the leave button.
-    console.log('Client presses leave button');
+function resetHandler() {
+    // Function triggered with the reset button.
+    console.log('Client resets the game');
     let data = {
-        idSocket: idSocket
+        socketId: socketId
+    };
+    socket.emit('reset', data);
+}
+
+function leaveHandler() {
+    // Function triggered with the leave button.
+    console.log('Client leaves the room');
+    let data = {
+        socketId: socketId
     };
     socket.emit('leave', data);
+
+    // Client has to return to the original state
+    leave();
 }
