@@ -16,27 +16,91 @@ let winnerId = undefined;
 
 let buttonManager = undefined;
 
-function setup() {
-    // Connect the socket to the server.
+document.addEventListener('DOMContentLoaded', () => {
+    // Connect the socket to the server
     socket = io();
+
+    // This client is connected to the server
+    socket.on('connect', () => {
+        console.log('Client connected with socket id ' + socket.id);
+        socketId = socket.id.slice();
+    });
+
+    // The server sends the sizes of the canvas
+    socket.on('initialize', (data) => {
+        sizes = data;
+        sizes.boardx = sizes.canvasx / 2;
+        sizes.boardytop = sizes.boardsize / 3;
+        sizes.boardybot = sizes.boardsize * 2 / 3;
+        sizes.rad = sizes.size * 3 / 4;
+        initialized = true;
+        let canvas = createCanvas(sizes.canvasx, sizes.canvasy);
+        canvas.parent('sketch-holder');
+        background(0);
+        mode = 'init';
+    });
+
+    // The server tells me to wait, either because I have just entered an empty room,
+    // or because my partner has left
+    socket.on('wait', () => {
+        mode = 'wait';
+        buttonManager.clear();
+        buttonManager.append('leave');
+        resetRoom();
+    });
+
+    // The game starts, I will find here my id and the current turn
+    socket.on('begin', (data) => {
+        playerId = data.playerId;
+        turn = data.turn;
+        console.log('Game begins. I am player ' + playerId + ' and the turn is ' + turn);
+        mode = 'play';
+        buttonManager.clear();
+        buttonManager.append('leave');
+    });
+
+    // The server updates the current turn
+    socket.on('updateTurn', (data) => {
+        console.log('Server updates the turn');
+        turn = data.turn;
+    });
+
+    // The server has sent a new disc
+    socket.on('addDisc', (data) => {
+        discs.push(data);
+    });
+
+    // Server indicates there is a winner
+    socket.on('winner', (data) => {
+        console.log('Player ' + data.playerId + ' is the winner!!');
+        winnerId = data.playerId;
+        mode = 'winner';
+        // Add the play again button
+        buttonManager.append('again');
+    });
+
+    // Server tells me to play again, with the same partner
+    socket.on('again', (data) => {
+        console.log('Play again');
+        turn = data.turn;
+        discs = [];
+        winnerId = undefined;
+        mode = 'play';
+        // Remove the play again button
+        buttonManager.remove('again');
+    });
 
     // Create the button manager and register some buttons
     buttonManager = new ButtonManager();
     buttonManager.register('ready', 'Play', readyHandler);
     buttonManager.register('leave', 'Leave room', leaveHandler);
-    buttonManager.register('reset', 'Reset game', resetHandler);
+    buttonManager.register('again', 'Play again', againHandler);
 
+});
+
+function setup() {
     // Create the colors array.
     colors = [color(255, 0, 0), color(255, 255, 102)];
-
-    // Declare the functions that will handle the different events.
-    socket.on('connect', connect);
-    socket.on('initialize', initialize);
-    socket.on('wait', wait);
-    socket.on('begin', begin);
-    socket.on('updateTurn', updateTurn);
-    socket.on('addDisc', addDisc);
-    socket.on('winner', winner);
 }
 
 function draw() {
@@ -68,65 +132,8 @@ function draw() {
     }
 }
 
-function connect() {
-    console.log('Client connected with socket id ' + socket.id);
-    // Keep a copy of the id.
-    socketId = socket.id.slice();
-}
-
-function initialize(data) {
-    // Receives the basic game data from master.
-    sizes = data;
-    sizes.boardx = sizes.canvasx / 2;
-    sizes.boardytop = sizes.boardsize / 3;
-    sizes.boardybot = sizes.boardsize * 2 / 3;
-    sizes.rad = sizes.size * 3 / 4;
-    initialized = true;
-    let canvas = createCanvas(sizes.canvasx, sizes.canvasy);
-    canvas.parent('sketch-holder');
-    background(0);
-    mode = 'init';
-}
-
-function wait() {
-    mode = 'wait';
-    buttonManager.removeAllButtons();
-    buttonManager.appendButton('leave');
-    resetGame();
-}
-
-function begin(data) {
-    // The game starts, I will find here my id and the current turn
-    console.log('Game begins');
-    playerId = data.playerId;
-    turn = data.turn;
-    console.log('I am player ' + playerId + ' and the turn is ' + turn);
-    mode = 'play';
-    buttonManager.removeAllButtons();
-    buttonManager.appendButton('leave');
-    buttonManager.appendButton('reset');
-}
-
-function updateTurn(data) {
-    console.log('Server updates the turn');
-    turn = data.turn;
-}
-
-function addDisc(data) {
-    // Receives a new disc and adds it to the list.
-    discs.push(data);
-
-    // Update the turn.
-    turn = data.playerId == 1 ? 2 : 1;
-}
-
-function winner(data) {
-    console.log('Player ' + data.playerId + ' is the winner!!');
-    winnerId = data.playerId;
-    mode = 'winner';
-}
-
-function resetGame() {
+// The room gets reset
+function resetRoom() {
     discs = [];
     playerId = undefined;
     turn = undefined;
@@ -175,7 +182,9 @@ function displayMessage() {
             noStroke();
             textSize(25);
             textAlign(CENTER, CENTER);
-            text('Player ' + winnerId + ' is the winner!', sizes.boardx, sizes.boardytop);
+            let message = playerId == winnerId ? 'You are the winner!' :
+                'Player ' + winnerId + ' is the winner!';
+            text(message, sizes.boardx, sizes.boardytop);
 
             // Display the colors of the players.
             fill(colors[playerId - 1]);
@@ -225,34 +234,25 @@ function inside(mx, my) {
 // Functions for buttons
 
 function readyHandler() {
-    // This function is triggered with the ready button.
+    // This function is triggered with the ready button
     console.log('Client wants to play');
-    let data = {
-        socketId: socketId
-    };
-    socket.emit('ready', data);
+    socket.emit('ready', { socketId: socketId });
 }
 
-function resetHandler() {
-    // Function triggered with the reset button.
-    console.log('Client resets the game');
-    let data = {
-        socketId: socketId
-    };
-    socket.emit('reset', data);
+function againHandler() {
+    // Function triggered with the play again button
+    console.log('Client wants to play again');
+    socket.emit('again', { socketId: socketId });
 }
 
 function leaveHandler() {
-    // Function triggered with the leave button.
+    // Function triggered with the leave button
     console.log('Client leaves the room');
-    let data = {
-        socketId: socketId
-    };
-    socket.emit('leave', data);
+    socket.emit('leave', { socketId: socketId });
 
     // Client has to return to the init mode
     mode = 'init';
-    buttonManager.removeAllButtons();
-    buttonManager.appendButton('ready');
-    resetGame();
+    buttonManager.clear();
+    buttonManager.append('ready');
+    resetRoom();
 }

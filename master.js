@@ -40,7 +40,6 @@ module.exports = class Master {
     ready(data) {
         console.log('Client ' + data.socketId + ' wants to play');
 
-        // Try to register the client in any of the rooms already available
         for (let i = 0; i < this.rooms.length; i++) {
             if (this.rooms[i].register(data.socketId)) {
                 console.log('Registered socket id ' + data.socketId + ' in an existing room');
@@ -59,7 +58,6 @@ module.exports = class Master {
         console.log('Receiving a click from client ' + data.socketId);
         console.log(data);
 
-        // Try to process the click in any of the rooms already available
         for (let i = 0; i < this.rooms.length; i++) {
             if (this.rooms[i].clicked(data)) {
                 return;
@@ -73,9 +71,19 @@ module.exports = class Master {
     leave(data) {
         console.log('A client has left its room');
 
-        // Try to unregister the client in any of the rooms
         for (let i = 0; i < this.rooms.length; i++) {
             if (this.rooms[i].unregister(data.socketId)) {
+                return;
+            }
+        }
+    }
+
+    // A client wants to play again
+    again(data) {
+        console.log('A client wants to play again');
+
+        for (let i = 0; i < this.rooms.length; i++) {
+            if (this.rooms[i].again(data.socketId)) {
                 return;
             }
         }

@@ -21,29 +21,27 @@ console.log('Sockets up');
 
 
 // Handle new connections.
-io.sockets.on('connection', newClient);
-function newClient(socket) {
+io.sockets.on('connection', (socket) => {
     console.log('Accepting a new client with socket id ' + socket.id);
     io.to(socket.id).emit('initialize', master.clientData);
 
     // Handle when a client is ready to play the game
-    socket.on('ready', ready);
-    function ready(data) {
+    socket.on('ready', (data) => {
         master.ready(data);
-    }
+    });
 
     // Handle when a client clicks on the canvas
-    socket.on('clicked', clicked);
-    function clicked(data) {
+    socket.on('clicked', (data) => {
         master.clicked(data);
-    }
+    });
 
     // Handle when a client wants to leave a room
-    socket.on('leave', leave);
-    function leave(data) {
+    socket.on('leave', (data) => {
         master.leave(data);
-    }
+    });
 
     // Handle when a client wants to reset the current game
-    // TODO
-}
+    socket.on('again', (data) => {
+        master.again(data);
+    });
+});

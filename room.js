@@ -6,6 +6,7 @@ module.exports = class Room {
         this.turn = undefined;
         this.playing = false;
         this.board = new Board();
+        this.initialTurn = undefined;
 
         // Register the socket ids already provided
         socketIds.forEach(id => {
@@ -36,6 +37,7 @@ module.exports = class Room {
             if (this.isFull()) {
                 console.log('Room is full. Telling players to begin playing');
                 this.turn = Math.random() < 0.5 ? 1 : 2;
+                this.initialTurn = this.turn;
                 this.playing = true;
                 // Send a message to both players to start playing
                 for (const [socketId, playerId] of Object.entries(this.playerIds)) {
@@ -56,18 +58,36 @@ module.exports = class Room {
 
     // Remove a player from the room, provided its socket id
     unregister(socketId) {
-        if (this.getSocketIds().includes(socketId)) {
-            delete this.playerIds[socketId];
-            this.turn = undefined;
-            this.playing = false;
-            this.board.reset();
+        // Return early if the client does not belong to the room
+        if (!this.getSocketIds().includes(socketId)) {
+            console.log('Client does not belong to this room');
+            return false;
+        }
 
-            // Tell the remaining client to wait
-            this.send('wait');
+        // Remove the client from this room
+        delete this.playerIds[socketId];
+        this.turn = undefined;
+        this.initialTurn = undefined;
+        this.playing = false;
+        this.board.reset();
+
+        // Tell the other client to wait
+        this.send('wait');
+        return true;
+    }
+
+    again(socketId) {
+        // Return early if the client does not belong to the room
+        if (!this.getSocketIds().includes(socketId)) {
+            console.log('Client does not belong to this room');
+            return false;
         }
-        else {
-            console.log('Cannot unregister, as the client does not belong to this room');
-        }
+
+        // Play again, so reset the board and select the next turn
+        this.turn = this.initialTurn == 1 ? 2 : 1;
+        this.initialTurn = this.turn;
+        this.board.reset();
+        this.send('again', { turn: this.turn });
     }
 
     // Return true if the provided socket id is registered in this room
