@@ -37,29 +37,28 @@ module.exports = class Master {
     }
 
     // A client wants to play and sends its socket id
-    ready(data) {
-        console.log('Client ' + data.socketId + ' wants to play');
+    ready(socketId) {
+        console.log('Client ' + socketId + ' wants to play');
 
         for (let i = 0; i < this.rooms.length; i++) {
-            if (this.rooms[i].register(data.socketId)) {
-                console.log('Registered socket id ' + data.socketId + ' in an existing room');
+            if (this.rooms[i].register(socketId)) {
+                console.log('Registered socket id ' + socketId + ' in an existing room');
                 return;
             }
         }
 
         // There is no room available, so create a new one
-        console.log('Creating a new room for socket id ' + data.socketId);
-        this.rooms.push(new Room([data.socketId]));
+        console.log('Creating a new room for socket id ' + socketId);
+        this.rooms.push(new Room([socketId]));
     }
 
     // A client has sent a click. The click has already been processed by the client in order
     // to minimise the number of these messages
-    clicked(data) {
-        console.log('Receiving a click from client ' + data.socketId);
-        console.log(data);
+    clicked(socketId, x, y) {
+        console.log('Receiving a click from client ' + socketId);
 
         for (let i = 0; i < this.rooms.length; i++) {
-            if (this.rooms[i].clicked(data)) {
+            if (this.rooms[i].clicked(socketId, x, y)) {
                 return;
             }
         }
@@ -68,22 +67,24 @@ module.exports = class Master {
     }
 
     // A client has left a room
-    leave(data) {
-        console.log('A client has left its room');
+    leave(socketId) {
 
         for (let i = 0; i < this.rooms.length; i++) {
-            if (this.rooms[i].unregister(data.socketId)) {
+            if (this.rooms[i].unregister(socketId)) {
+                console.log('Client ' + socketId + ' has left its room');
                 return;
             }
         }
+
+        console.log('Client ' + socketId + ' has disconnected');
     }
 
     // A client wants to play again
-    again(data) {
+    again(socketId) {
         console.log('A client wants to play again');
 
         for (let i = 0; i < this.rooms.length; i++) {
-            if (this.rooms[i].again(data.socketId)) {
+            if (this.rooms[i].again(socketId)) {
                 return;
             }
         }

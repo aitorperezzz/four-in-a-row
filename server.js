@@ -26,22 +26,29 @@ io.sockets.on('connection', (socket) => {
     io.to(socket.id).emit('initialize', master.clientData);
 
     // Handle when a client is ready to play the game
-    socket.on('ready', (data) => {
-        master.ready(data);
+    socket.on('ready', () => {
+        master.ready(socket.id);
     });
 
     // Handle when a client clicks on the canvas
     socket.on('clicked', (data) => {
-        master.clicked(data);
+        master.clicked(socket.id, data.x, data.y);
     });
 
     // Handle when a client wants to leave a room
-    socket.on('leave', (data) => {
-        master.leave(data);
+    socket.on('leave', () => {
+        console.log('Client is leaving');
+        master.leave(socket.id);
     });
 
     // Handle when a client wants to reset the current game
-    socket.on('again', (data) => {
-        master.again(data);
+    socket.on('again', () => {
+        master.again(socket.id);
+    });
+
+    // Handle when a client wants to reset the current game
+    socket.on('disconnect', () => {
+        console.log('Server has detected a disconnection');
+        master.leave(socket.id);
     });
 });

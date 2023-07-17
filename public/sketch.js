@@ -90,6 +90,11 @@ document.addEventListener('DOMContentLoaded', () => {
         buttonManager.remove('again');
     });
 
+    // Attempt to send a message to the server before leaving
+    socket.on('disconnect', () => {
+        socket.emit('leave');
+    });
+
     // Create the button manager and register some buttons
     buttonManager = new ButtonManager();
     buttonManager.register('ready', 'Play', readyHandler);
@@ -221,7 +226,7 @@ function mousePressed() {
         return;
     }
 
-    socket.emit('clicked', { socketId: socketId, x: mouseX, y: mouseY });
+    socket.emit('clicked', { x: mouseX, y: mouseY });
 }
 
 function inside(mx, my) {
@@ -236,19 +241,19 @@ function inside(mx, my) {
 function readyHandler() {
     // This function is triggered with the ready button
     console.log('Client wants to play');
-    socket.emit('ready', { socketId: socketId });
+    socket.emit('ready');
 }
 
 function againHandler() {
     // Function triggered with the play again button
     console.log('Client wants to play again');
-    socket.emit('again', { socketId: socketId });
+    socket.emit('again');
 }
 
 function leaveHandler() {
     // Function triggered with the leave button
     console.log('Client leaves the room');
-    socket.emit('leave', { socketId: socketId });
+    socket.emit('leave');
 
     // Client has to return to the init mode
     mode = 'init';

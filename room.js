@@ -97,10 +97,10 @@ module.exports = class Room {
 
     // Send a click to the room and process it.
     // Return true if the click was intended for this room
-    clicked(data) {
+    clicked(socketId, x, y) {
         // Check the player belongs to this room
         var intendedForThisRoom = false;
-        if (!this.isRegistered(data.socketId)) {
+        if (!this.isRegistered(socketId)) {
             console.log('Socket id is not registered in this room');
             console.log(this);
             return intendedForThisRoom;
@@ -114,14 +114,14 @@ module.exports = class Room {
         }
 
         // Check it's the correct turn
-        let playerId = this.playerIds[data.socketId];
+        let playerId = this.playerIds[socketId];
         if (this.turn != playerId) {
             console.log('Ignoring click: not the turn of this player');
             return intendedForThisRoom;
         }
 
         // Pass the click to the board, who will decide if there is an update or not
-        let updateData = this.board.clicked(playerId, data.x, data.y);
+        let updateData = this.board.clicked(playerId, x, y);
         if (updateData) {
             this.send('addDisc', updateData);
 
