@@ -1,11 +1,11 @@
-let Board = require('./board.js');
+let Grid = require('./grid.js');
 
 module.exports = class Room {
     constructor(socketIds) {
         this.playerIds = {};
         this.turn = undefined;
         this.playing = false;
-        this.board = new Board();
+        this.grid = new Grid();
         this.initialTurn = undefined;
 
         // Register the socket ids already provided
@@ -69,7 +69,7 @@ module.exports = class Room {
         this.turn = undefined;
         this.initialTurn = undefined;
         this.playing = false;
-        this.board.reset();
+        this.grid.reset();
 
         // Tell the other client to wait
         this.send('wait');
@@ -83,10 +83,10 @@ module.exports = class Room {
             return false;
         }
 
-        // Play again, so reset the board and select the next turn
+        // Play again, so reset the grid and select the next turn
         this.turn = this.initialTurn == 1 ? 2 : 1;
         this.initialTurn = this.turn;
-        this.board.reset();
+        this.grid.reset();
         this.send('again', { turn: this.turn });
     }
 
@@ -97,7 +97,7 @@ module.exports = class Room {
 
     // Send a click to the room and process it.
     // Return true if the click was intended for this room
-    clicked(socketId, x, y) {
+    clicked(socketId, col) {
         // Check the player belongs to this room
         var intendedForThisRoom = false;
         if (!this.isRegistered(socketId)) {
@@ -120,19 +120,20 @@ module.exports = class Room {
             return intendedForThisRoom;
         }
 
-        // Pass the click to the board, who will decide if there is an update or not
-        let updateData = this.board.clicked(playerId, x, y);
-        if (updateData) {
-            this.send('addDisc', updateData);
+        // Pass the click to the grid, who will decide if there is an update or not
+        let disc = this.grid.clicked(playerId, col);
+        if (disc) {
+            console.log('A disc update needs to be sent');
+            this.send('addDisc', disc);
 
             // Update the turn in master.
             this.turn = this.turn == 1 ? 2 : 1;
             this.send('updateTurn', { turn: this.turn });
 
             // Check for win
-            let winnerData = this.board.checkWin();
-            if (winnerData) {
-                this.send('winner', winnerData);
+            let winnerId = this.grid.checkWin();
+            if (winnerId != null) {
+                this.send('winner', { playerId: winnerId });
             }
         }
 

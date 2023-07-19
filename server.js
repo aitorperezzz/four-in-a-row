@@ -23,7 +23,6 @@ console.log('Sockets up');
 // Handle new connections.
 io.sockets.on('connection', (socket) => {
     console.log('Accepting a new client with socket id ' + socket.id);
-    io.to(socket.id).emit('initialize', master.clientData);
 
     // Handle when a client is ready to play the game
     socket.on('ready', () => {
@@ -32,7 +31,7 @@ io.sockets.on('connection', (socket) => {
 
     // Handle when a client clicks on the canvas
     socket.on('clicked', (data) => {
-        master.clicked(socket.id, data.x, data.y);
+        master.clicked(socket.id, data.col);
     });
 
     // Handle when a client wants to leave a room
