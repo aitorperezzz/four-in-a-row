@@ -1,7 +1,6 @@
 // Declare the socket variables.
 let socket;
 let socketId;
-let initialized = false;
 
 // Declare an object to store lengths.
 let sizes = {};
@@ -14,6 +13,9 @@ let turn = undefined;
 let colors = undefined;
 let winnerId = undefined;
 
+// Objects inside the canvas
+let message = undefined;
+let submessage = undefined;
 let buttonManager = undefined;
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -24,20 +26,6 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.on('connect', () => {
         console.log('Client connected with socket id ' + socket.id);
         socketId = socket.id.slice();
-    });
-
-    // The server sends the sizes of the canvas
-    socket.on('initialize', (data) => {
-        sizes = data;
-        sizes.boardx = sizes.canvasx / 2;
-        sizes.boardytop = sizes.boardsize / 3;
-        sizes.boardybot = sizes.boardsize * 2 / 3;
-        sizes.rad = sizes.size * 3 / 4;
-        initialized = true;
-        let canvas = createCanvas(sizes.canvasx, sizes.canvasy);
-        canvas.parent('sketch-holder');
-        background(0);
-        mode = 'init';
     });
 
     // The server tells me to wait, either because I have just entered an empty room,
@@ -67,7 +55,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // The server has sent a new disc
     socket.on('addDisc', (data) => {
-        discs.push(data);
+        // Compute the real x and y positions of the disc
+        console.log('Adding disc sent by the server');
+        let coordinates = computeDiscCoordinates(data.col, data.row);
+        discs.push({
+            playerId: data.playerId,
+            x: coordinates.x,
+            y: coordinates.y,
+            col: data.col,
+            row: data.row
+        });
     });
 
     // Server indicates there is a winner
@@ -103,38 +100,131 @@ document.addEventListener('DOMContentLoaded', () => {
 
 });
 
+
+// Provided the col and row of a disc, returns the x and y coordinates
+// that correspond with the current global sizes
+function computeDiscCoordinates(col, row) {
+    let xpos = sizes.initialx + sizes.size / 2 + col * sizes.size;
+    let ypos = sizes.initialy + sizes.ysize - sizes.size / 2 - row * sizes.size;
+    return { x: xpos, y: ypos };
+}
+
+// Makes the complete global sizes computation
+function computeSizes() {
+    // x dimension (horizontal) is 4/5 of the y dimension (vertical)
+    let canvasRatio = 4 / 5;
+    let screenProportion = 0.8;
+    let boardProportion = 0.2;
+    let gridxDimension = 7;
+    let gridyDimension = 6;
+    let gridRatio = gridxDimension / gridyDimension;
+    let gridProportion = 0.8;
+
+    // Compute the sizes of the p5js grid
+    if (windowHeight * canvasRatio < windowWidth) {
+        // Decide according to vertical space
+        sizes.canvasy = screenProportion * windowHeight;
+        sizes.canvasx = sizes.canvasy * canvasRatio;
+    }
+    else {
+        // Decide according to horizontal space
+        sizes.canvasx = screenProportion * windowWidth;
+        sizes.canvasy = sizes.canvasx / canvasRatio;
+    }
+
+    // Text size
+    sizes.textsize = sizes.canvasy * 0.045;
+    sizes.subtextsize = sizes.canvasy * 0.035;
+
+    // Board size
+    sizes.boardsize = sizes.canvasy * boardProportion;
+
+    // Compute the sizes of the grid itself
+    if ((sizes.canvasy - sizes.boardsize) * gridRatio < sizes.canvasx) {
+        // Decide according to vertical space
+        sizes.ysize = gridProportion * (sizes.canvasy - sizes.boardsize);
+        sizes.xsize = sizes.ysize * gridRatio;
+    }
+    else {
+        // Decide according to horizontal space
+        sizes.xsize = gridProportion * sizes.canvasx;
+        sizes.ysize = sizes.xsize / gridRatio;
+    }
+    sizes.size = sizes.xsize / gridxDimension;
+
+    // Initial positions of the lines
+    sizes.initialx = (sizes.canvasx - sizes.xsize) / 2;
+    sizes.initialy = sizes.boardsize + (sizes.canvasy - sizes.boardsize - sizes.ysize) / 2;
+
+    // To place things on the message board
+    sizes.boardx = sizes.canvasx / 2;
+    sizes.boardytop = sizes.boardsize / 4;
+    sizes.boardybot = sizes.boardsize * 3 / 4;
+    sizes.rad = sizes.size * 3 / 4;
+}
+
 function setup() {
+
+    // Make a first computation of the global sizes and create a canvas
+    computeSizes();
+    let canvas = createCanvas(sizes.canvasx, sizes.canvasy);
+    canvas.parent('sketch-holder');
+
+    // Create the messages
+    message = new Message();
+    submessage = new Message();
+    message.resize(sizes.boardx, sizes.boardytop, sizes.textsize);
+    submessage.resize(sizes.boardx, sizes.boardybot, sizes.subtextsize);
+
     // Create the colors array.
-    colors = [color(255, 0, 0), color(255, 255, 102)];
+    colors = { 1: color(255, 0, 0), 2: color(255, 255, 102) };
+
+    // Init mode
+    mode = 'init';
 }
 
 function draw() {
     // Draw a background.
-    background(0);
+    background('#36454F');
 
-    if (initialized) {
-        if (mode == 'play' || mode == 'winner') {
-            // Draw the vertical lines.
-            strokeWeight(2);
-            for (let i = 0; i < 8; i++) {
-                stroke(255);
-                line(sizes.initialx + i * sizes.size, sizes.initialy, sizes.initialx + i * sizes.size, sizes.initialy + sizes.ysize);
-            }
-
-            // Draw the bottom line.
-            line(sizes.initialx, sizes.initialy + sizes.ysize, sizes.initialx + sizes.xsize, sizes.initialy + sizes.ysize);
-
-            // Draw the discs.
-            for (let k = 0; k < discs.length; k++) {
-                fill(colors[discs[k].playerId - 1]);
-                noStroke();
-                ellipse(discs[k].x, discs[k].y, sizes.rad, sizes.rad);
-            }
+    if (mode == 'play' || mode == 'winner') {
+        // Draw the vertical lines.
+        strokeWeight(2);
+        stroke(255);
+        for (let i = 0; i < 8; i++) {
+            stroke(255);
+            line(sizes.initialx + i * sizes.size, sizes.initialy, sizes.initialx + i * sizes.size, sizes.initialy + sizes.ysize);
         }
 
-        // Display the message at the top.
-        displayMessage();
+        // Draw the bottom line.
+        line(sizes.initialx, sizes.initialy + sizes.ysize, sizes.initialx + sizes.xsize, sizes.initialy + sizes.ysize);
+
+        // Draw the discs.
+        for (let k = 0; k < discs.length; k++) {
+            fill(colors[discs[k].playerId]);
+            noStroke();
+            ellipse(discs[k].x, discs[k].y, sizes.rad, sizes.rad);
+        }
     }
+
+    // Display the messages
+    displayMessages();
+}
+
+function windowResized() {
+    // Compute new global sizes
+    computeSizes();
+    // Canvas
+    resizeCanvas(sizes.canvasx, sizes.canvasy);
+    // Messages
+    message.resize(sizes.boardx, sizes.boardytop, sizes.textsize);
+    submessage.resize(sizes.boardx, sizes.boardybot, sizes.subtextsize);
+    // Discs
+    discs.forEach(disc => {
+        let newCoordinates = computeDiscCoordinates(disc.col, disc.row);
+        disc.x = newCoordinates.x;
+        disc.y = newCoordinates.y;
+    });
 }
 
 // The room gets reset
@@ -145,64 +235,8 @@ function resetRoom() {
     winnerId = undefined;
 }
 
-function displayMessage() {
-    // Diplay the messages on the board.
-    switch (mode) {
-        case 'init':
-            fill(255);
-            noStroke();
-            textSize(25);
-            textAlign(CENTER, CENTER);
-            text('Press play to enter a room and play', sizes.boardx, sizes.boardytop);
-            break;
-        case 'wait':
-            fill(255);
-            noStroke();
-            textSize(25);
-            textAlign(CENTER, CENTER);
-            text('Waiting for another player', sizes.boardx, sizes.boardytop);
-            break;
-        case 'play':
-            // Display the turns.
-            fill(255);
-            noStroke();
-            textSize(25);
-            textAlign(CENTER, CENTER);
-            if (isMyTurn()) {
-                text('Playing. Your turn', sizes.boardx, sizes.boardytop);
-            }
-            else {
-                text('Playing. Turn of player ' + turn, sizes.boardx, sizes.boardytop);
-            }
-
-            // Display the colors of the players.
-            fill(colors[playerId - 1]);
-            noStroke();
-            textSize(20);
-            textAlign(CENTER, CENTER);
-            text('You are player ' + playerId, sizes.boardx, sizes.boardybot);
-            break;
-        case 'winner':
-            fill(255);
-            noStroke();
-            textSize(25);
-            textAlign(CENTER, CENTER);
-            let message = playerId == winnerId ? 'You are the winner!' :
-                'Player ' + winnerId + ' is the winner!';
-            text(message, sizes.boardx, sizes.boardytop);
-
-            // Display the colors of the players.
-            fill(colors[playerId - 1]);
-            noStroke();
-            textSize(20);
-            textAlign(CENTER, CENTER);
-            text('You are player ' + playerId, sizes.boardx, sizes.boardybot);
-            break;
-    }
-}
-
+// Returns true if this is the turn of the client
 function isMyTurn() {
-    // Decides if it is this client's turn.
     return playerId == turn;
 }
 
@@ -221,19 +255,63 @@ function mousePressed() {
     }
 
     // Only if it's inside the canvas
-    if (!inside(mouseX, mouseY)) {
-        console.log('Ignoring click: outside the canvas');
+    let col = getColumn(mouseX, mouseY);
+    if (col == null) {
+        console.log('Ignoring click: outside the grid');
         return;
     }
 
-    socket.emit('clicked', { x: mouseX, y: mouseY });
+    socket.emit('clicked', { col: col });
 }
 
-function inside(mx, my) {
-    // Receives a mouse click and decides if it was inside the canvas or not.
-    let xtrue = 0 < mx && mx < sizes.canvasx;
-    let ytrue = 0 < my && my < sizes.canvasy;
-    return xtrue && ytrue;
+function getColumn(mx, my) {
+    // Decide if the click is inside the grid itself
+    let xtrue = sizes.initialx < mx && mx < sizes.initialx + 7 * sizes.size;
+    let ytrue = sizes.initialy < my && my < sizes.initialy + 6 * sizes.size;
+    if (!xtrue || !ytrue) {
+        console.log('Click outside the grid');
+        return null;
+    }
+
+    // Go through all the columns
+    for (let i = 0; i < 7; i++) {
+        if (sizes.initialx + i * sizes.size < mx && mx < sizes.initialx + (i + 1) * sizes.size) {
+            console.log('Click on column ' + i);
+            return i;
+        }
+    }
+    console.log('Error: click inside the grid but not in a specific column');
+    return null;
+}
+
+function displayMessages() {
+    // Update the messages if necessary
+    switch (mode) {
+        case 'init':
+            message.setText('Press play to enter a room and play');
+            submessage.setText(undefined);
+            break;
+        case 'wait':
+            message.setText('Waiting for another player...');
+            submessage.setText(undefined);
+            break;
+        case 'play':
+            message.setText(isMyTurn() ? 'Playing. Your turn' :
+                'Playing. Turn of player ' + turn);
+            submessage.setColor(colors[playerId]);
+            submessage.setText('You are player ' + playerId);
+            break;
+        case 'winner':
+            message.setText(playerId == winnerId ? 'You are the winner!' :
+                'Player ' + winnerId + ' is the winner!');
+            submessage.setColor(colors[playerId]);
+            submessage.setText('You are player ' + playerId);
+            break;
+    }
+
+    // Display the messages
+    message.draw();
+    submessage.draw();
 }
 
 // Functions for buttons

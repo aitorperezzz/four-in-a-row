@@ -1,6 +1,6 @@
 /* CSS code for the entire website */
 body {
-    background-color: #36454F;
+    background-color: #232e35;
     /* Soft dark blue background color */
     margin: 0;
     display: flex;
@@ -38,6 +38,6 @@ body {
     /* Align content to the top */
     align-items: center;
     flex-grow: 1;
-    background-color: #36454F;
+    background-color: #232e35;
     /* Soft dark blue background color */
 }
