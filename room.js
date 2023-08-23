@@ -95,6 +95,7 @@ module.exports = class Room {
         this.initialTurn = this.turn;
         this.grid.reset();
         this.send('again', { turn: this.turn });
+        return true;
     }
 
     // Return true if the provided socket id is registered in this room
