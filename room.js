@@ -1,8 +1,9 @@
 let Grid = require('./grid.js');
+let PlayerInfo = require('./playerInfo.js');
 
 module.exports = class Room {
     constructor(socketIds) {
-        this.playerIds = {};
+        this.playersInfo = {};
         this.turn = undefined;
         this.playing = false;
         this.grid = new Grid();
@@ -14,10 +15,9 @@ module.exports = class Room {
         });
     }
 
-
     // Return true if the room is full
     isFull() {
-        return Object.keys(this.playerIds).length == 2;
+        return Object.keys(this.playersInfo).length == 2;
     }
 
     // Register a new player in this room provided its socket id
@@ -27,7 +27,7 @@ module.exports = class Room {
             // Decide the player id for this client
             let playerId = this.getAvailableId();
             // Add it to the dictionary
-            this.playerIds[socketId] = playerId;
+            this.playersInfo[socketId] = new PlayerInfo(playerId);
             console.log('Socket id ' + socketId + ' has been registered');
 
             // If the room is now full, it's a good time to decide a turn.
@@ -38,9 +38,13 @@ module.exports = class Room {
                 this.initialTurn = this.turn;
                 this.playing = true;
                 // Send a message to both players to start playing
-                for (const [socketId, playerId] of Object.entries(this.playerIds)) {
-                    io.to(socketId).emit('begin', { playerId: playerId, socketId: socketId, turn: this.turn });
-                }
+                this.getSocketIds().forEach(socketId => {
+                    io.to(socketId).emit('begin', {
+                        playerId: this.playersInfo[socketId].getPlayerId(),
+                        socketId: socketId,
+                        turn: this.turn
+                    });
+                });
             }
             else {
                 console.log('Telling the player to wait');
@@ -63,7 +67,12 @@ module.exports = class Room {
         }
 
         // Remove the client from this room
-        delete this.playerIds[socketId];
+        delete this.playersInfo[socketId];
+        // Reset the info of the other player
+        this.getSocketIds().forEach(socketId => {
+            this.playersInfo[socketId].reset();
+        });
+        // Reset other variables
         this.turn = undefined;
         this.initialTurn = undefined;
         this.playing = false;
@@ -109,7 +118,7 @@ module.exports = class Room {
         }
 
         // Check it's the correct turn
-        let playerId = this.playerIds[socketId];
+        let playerId = this.playersInfo[socketId].getPlayerId();
         if (this.turn != playerId) {
             console.log('Ignoring click: not the turn of this player');
             return true;
@@ -128,7 +137,16 @@ module.exports = class Room {
             // Check for win
             let winnerId = this.grid.checkWin();
             if (winnerId != null) {
-                this.send('winner', { playerId: winnerId });
+                let winnerSocketId = this.getSocketId(winnerId);
+                this.playersInfo[winnerSocketId].addGameWon();
+                this.getSocketIds().forEach(socketId => {
+                    this.playersInfo[socketId].addGamePlayed();
+                    io.to(socketId).emit('winner', {
+                        playerId: winnerId,
+                        gamesWon: this.playersInfo[socketId].getGamesWon(),
+                        gamesPlayed: this.playersInfo[socketId].getGamesPlayed()
+                    });
+                });
             }
         }
 
@@ -137,7 +155,18 @@ module.exports = class Room {
 
     // Return the list of socket ids in this room
     getSocketIds() {
-        return Object.keys(this.playerIds);
+        return Object.keys(this.playersInfo);
+    }
+
+    // Return the socket id of the provided player id
+    // Return null if there is none
+    getSocketId(playerId) {
+        for (let socketId of this.getSocketIds()) {
+            if (this.playersInfo[socketId].getPlayerId() == playerId) {
+                return socketId;
+            }
+        }
+        return null;
     }
 
     // Send a message to all participants in this room
@@ -149,9 +178,12 @@ module.exports = class Room {
 
     // Assign an id that is available
     getAvailableId() {
-        let playerIdsInUse = new Set(Object.values(this.playerIds));
+        let playerIdsInUse = [];
+        this.getSocketIds().forEach(socketId => {
+            playerIdsInUse.push(this.playersInfo[socketId].getPlayerId());
+        });
         for (let id = 1; id <= 2; id++) {
-            if (!playerIdsInUse.has(id)) {
+            if (!playerIdsInUse.includes(id)) {
                 return id;
             }
         }

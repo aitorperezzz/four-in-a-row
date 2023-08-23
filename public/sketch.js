@@ -12,6 +12,8 @@ let playerId = undefined;
 let turn = undefined;
 let colors = undefined;
 let winnerId = undefined;
+let gamesWon = 0;
+let gamesPlayed = 0;
 
 // Objects inside the canvas
 let message = undefined;
@@ -72,6 +74,8 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('Player ' + data.playerId + ' is the winner');
         winnerId = data.playerId;
         mode = 'winner';
+        gamesWon = data.gamesWon;
+        gamesPlayed = data.gamesPlayed;
         // Add the play again button
         buttonManager.append('again');
     });
@@ -233,6 +237,8 @@ function resetRoom() {
     playerId = undefined;
     turn = undefined;
     winnerId = undefined;
+    gamesWon = 0;
+    gamesPlayed = 0;
 }
 
 // Returns true if this is the turn of the client
@@ -299,19 +305,23 @@ function displayMessages() {
             message.setText(isMyTurn() ? 'Playing. Your turn' :
                 'Playing. Turn of player ' + turn);
             submessage.setColor(colors[playerId]);
-            submessage.setText('You are player ' + playerId);
+            submessage.setText(createSubmessage());
             break;
         case 'winner':
             message.setText(playerId == winnerId ? 'You are the winner!' :
                 'Player ' + winnerId + ' is the winner!');
             submessage.setColor(colors[playerId]);
-            submessage.setText('You are player ' + playerId);
+            submessage.setText(createSubmessage());
             break;
     }
 
     // Display the messages
     message.draw();
     submessage.draw();
+}
+
+function createSubmessage() {
+    return 'You are player ' + playerId + ' (' + gamesWon + '/' + gamesPlayed + ')';
 }
 
 // Functions for buttons
