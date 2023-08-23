@@ -10,9 +10,7 @@ module.exports = class Room {
 
         // Register the socket ids already provided
         socketIds.forEach(id => {
-            console.log('id ' + id);
             this.register(id);
-            console.log(typeof (id));
         });
     }
 
@@ -59,7 +57,7 @@ module.exports = class Room {
     // Remove a player from the room, provided its socket id
     unregister(socketId) {
         // Return early if the client does not belong to the room
-        if (!this.getSocketIds().includes(socketId)) {
+        if (!this.isRegistered(socketId)) {
             console.log('Client does not belong to this room');
             return false;
         }
@@ -78,7 +76,7 @@ module.exports = class Room {
 
     again(socketId) {
         // Return early if the client does not belong to the room
-        if (!this.getSocketIds().includes(socketId)) {
+        if (!this.isRegistered(socketId)) {
             console.log('Client does not belong to this room');
             return false;
         }
@@ -98,26 +96,23 @@ module.exports = class Room {
     // Send a click to the room and process it.
     // Return true if the click was intended for this room
     clicked(socketId, col) {
-        // Check the player belongs to this room
-        var intendedForThisRoom = false;
+        // Return early if the client does not belong to the room
         if (!this.isRegistered(socketId)) {
-            console.log('Socket id is not registered in this room');
-            console.log(this);
-            return intendedForThisRoom;
+            console.log('Client does not belong to this room');
+            return false;
         }
-        intendedForThisRoom = true;
 
         // Check this room is playing
         if (!this.playing) {
             console.log('Ignoring click: room is not playing');
-            return intendedForThisRoom;
+            return true;
         }
 
         // Check it's the correct turn
         let playerId = this.playerIds[socketId];
         if (this.turn != playerId) {
             console.log('Ignoring click: not the turn of this player');
-            return intendedForThisRoom;
+            return true;
         }
 
         // Pass the click to the grid, who will decide if there is an update or not
@@ -137,7 +132,7 @@ module.exports = class Room {
             }
         }
 
-        return intendedForThisRoom;
+        return true;
     }
 
     // Return the list of socket ids in this room

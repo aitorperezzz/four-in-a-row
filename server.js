@@ -45,9 +45,9 @@ io.sockets.on('connection', (socket) => {
         master.again(socket.id);
     });
 
-    // Handle when a client wants to reset the current game
+    // Handle disconnects
     socket.on('disconnect', () => {
-        console.log('Server has detected a disconnection');
+        console.log('Server has detected a disconnect');
         master.leave(socket.id);
     });
 });

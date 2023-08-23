@@ -45,18 +45,18 @@ module.exports = class Master {
                 return;
             }
         }
-
-        console.log('Client ' + socketId + ' has disconnected');
+        console.log('Disconnect of a client that does not belong to any room');
     }
 
     // A client wants to play again
     again(socketId) {
-        console.log('A client wants to play again');
+        console.log('Client ' + socketId + ' wants to play again');
 
         for (let i = 0; i < this.rooms.length; i++) {
             if (this.rooms[i].again(socketId)) {
                 return;
             }
         }
+        console.log('Warning: client ' + socketId + ' not found in any room wants to play again');
     }
 };

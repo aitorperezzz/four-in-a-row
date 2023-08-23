@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Server indicates there is a winner
     socket.on('winner', (data) => {
-        console.log('Player ' + data.playerId + ' is the winner!!');
+        console.log('Player ' + data.playerId + ' is the winner');
         winnerId = data.playerId;
         mode = 'winner';
         // Add the play again button
