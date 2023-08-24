@@ -31,13 +31,18 @@ document.addEventListener('DOMContentLoaded', () => {
         socketId = socket.id.slice();
     });
 
-    // The server tells me to wait, either because I have just entered an empty room,
-    // or because my partner has left
+    // The server tells me to wait because I have entered an empty room
     socket.on('wait', () => {
         mode = 'wait';
         buttonManager.clear();
         buttonManager.append('leave');
         resetRoom();
+    });
+
+    // My room has been dissolved 
+    // (my partner has either left or disconnected)
+    socket.on('leave', () => {
+        goToInit();
     });
 
     // The game starts, I will find here my id and the current turn
@@ -241,6 +246,14 @@ function resetRoom() {
     winnerId = undefined;
     gamesWon = 0;
     gamesPlayed = 0;
+    roomId = undefined;
+}
+
+function goToInit() {
+    mode = 'init';
+    buttonManager.clear();
+    buttonManager.append('ready');
+    resetRoom();
 }
 
 // Returns true if this is the turn of the client
@@ -331,24 +344,19 @@ function createSubmessage() {
 
 function readyHandler() {
     // This function is triggered with the ready button
-    console.log('Client wants to play');
+    console.log('I want to play');
     socket.emit('ready');
 }
 
 function againHandler() {
     // Function triggered with the play again button
-    console.log('Client wants to play again');
+    console.log('I want to play again');
     socket.emit('again');
 }
 
 function leaveHandler() {
     // Function triggered with the leave button
-    console.log('Client leaves the room');
+    console.log('I want to leave the room');
     socket.emit('leave');
-
-    // Client has to return to the init mode
-    mode = 'init';
-    buttonManager.clear();
-    buttonManager.append('ready');
-    resetRoom();
+    goToInit();
 }

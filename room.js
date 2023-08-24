@@ -68,20 +68,15 @@ module.exports = class Room {
             return false;
         }
 
-        // Remove the client from this room
-        delete this.playersInfo[socketId];
-        // Reset the info of the other player
-        this.getSocketIds().forEach(socketId => {
-            this.playersInfo[socketId].reset();
-        });
-        // Reset other variables
-        this.turn = undefined;
-        this.initialTurn = undefined;
-        this.playing = false;
-        this.grid.reset();
+        // The room has to dissolve, so inform the other player
+        for (let playerSocketId of this.getSocketIds()) {
+            if (playerSocketId != socketId) {
+                // This is the other player
+                io.to(playerSocketId).emit('leave');
+            }
+        }
 
-        // Tell the other client to wait
-        this.send('wait');
+        // Let the master know the message was intended for this room
         return true;
     }
 

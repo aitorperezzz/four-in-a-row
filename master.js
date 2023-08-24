@@ -42,6 +42,9 @@ module.exports = class Master {
         for (let i = 0; i < this.rooms.length; i++) {
             if (this.rooms[i].unregister(socketId)) {
                 console.log('Client ' + socketId + ' has left its room');
+                // The room has been dissolved, so remove it from the server
+                this.rooms.splice(i, 1);
+                console.log('Room deleted. Current number of rooms: ' + this.rooms.length);
                 return;
             }
         }
