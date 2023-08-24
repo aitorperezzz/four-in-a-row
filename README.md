@@ -14,6 +14,8 @@ Inside a room, a counter will display the current winrate of each of the players
 The turn will be random for the first game and will alternate from then on.
 The color of the player cannot be chosen, and is constant for a given room.
 
+<img src="https://github.com/aitorperezzz/four-in-a-row/blob/master/images/readme_image.png" alt="drawing" align="center" width="50%"/>
+
 ## How to run it
 Clone the repository on a Linux box and run:
 * `npm install`
