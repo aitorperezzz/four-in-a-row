@@ -8,24 +8,23 @@ module.exports = class Master {
 
     // A client wants to play and sends its socket id
     ready(socketId) {
-        console.log('Client ' + socketId + ' wants to play');
+        logger.info('Client ' + socketId + ' wants to play');
 
         for (let i = 0; i < this.rooms.length; i++) {
             if (this.rooms[i].register(socketId)) {
-                console.log('Registered socket id ' + socketId + ' in an existing room');
                 return;
             }
         }
 
         // There is no room available, so create a new one
-        console.log('Creating a new room for socket id ' + socketId);
+        logger.info('Creating a new room for client ' + socketId);
         this.rooms.push(new Room(this.getRoomId(), [socketId]));
     }
 
     // A client has sent a click. The click has already been processed by the client in order
     // to minimise the number of these messages
     clicked(socketId, col) {
-        console.log('Receiving a click from client ' + socketId + ' on column ' + col);
+        logger.debug('Receiving a click from client ' + socketId + ' on column ' + col);
 
         for (let i = 0; i < this.rooms.length; i++) {
             if (this.rooms[i].clicked(socketId, col)) {
@@ -33,7 +32,7 @@ module.exports = class Master {
             }
         }
 
-        console.log('Warning: click of a client that does not belong to any room');
+        logger.warn('Click of a client that does not belong to any room');
     }
 
     // A client has left a room
@@ -41,26 +40,26 @@ module.exports = class Master {
 
         for (let i = 0; i < this.rooms.length; i++) {
             if (this.rooms[i].unregister(socketId)) {
-                console.log('Client ' + socketId + ' has left its room');
+                logger.info('Client ' + socketId + ' has left its room');
                 // The room has been dissolved, so remove it from the server
                 this.rooms.splice(i, 1);
-                console.log('Room deleted. Current number of rooms: ' + this.rooms.length);
+                logger.info('A room has been deleted. Current number of rooms: ' + this.rooms.length);
                 return;
             }
         }
-        console.log('Disconnect of a client that does not belong to any room');
+        logger.debug('Disconnect of a client that does not belong to any room');
     }
 
     // A client wants to play again
     again(socketId) {
-        console.log('Client ' + socketId + ' wants to play again');
+        logger.info('Client ' + socketId + ' wants to play again');
 
         for (let i = 0; i < this.rooms.length; i++) {
             if (this.rooms[i].again(socketId)) {
                 return;
             }
         }
-        console.log('Warning: client ' + socketId + ' not found in any room wants to play again');
+        logger.warn('Client ' + socketId + ' not found in any room wants to play again');
     }
 
     // Returns the next id that is not in use by any room, starting from 1
@@ -77,7 +76,7 @@ module.exports = class Master {
             }
             // Return it if not in use in any room
             if (!used) {
-                console.log('Assigning room id ' + possibleId);
+                logger.info('Assigning room id ' + possibleId);
                 return possibleId;
             }
             // TRy with the next one

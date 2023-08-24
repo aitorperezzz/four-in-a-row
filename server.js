@@ -1,9 +1,27 @@
 // This file implements the server code for the game.
 
+// Create a logger
+const winston = require('winston');
+const { combine, timestamp, printf } = winston.format;
+const myFormat = printf(({ level, message, timestamp }) => {
+    return `${timestamp} ${level}: ${message}`;
+});
+global.logger = winston.createLogger({
+    level: 'debug',
+    format: combine(
+        timestamp(),
+        myFormat
+    ),
+    transports: [
+        new winston.transports.File({ filename: 'server.log', level: 'debug' }),
+        new winston.transports.Console()
+    ]
+});
+
 // Create a master that handles the game logic server side.
 let Master = require('./master.js');
 let master = new Master();
-console.log('Master created');
+logger.info('Master created');
 
 // Create the server
 let express = require('express');
@@ -12,17 +30,17 @@ let app = express();
 let server = app.listen(8080);
 // Select the folder to serve
 app.use(express.static('public'));
-console.log('Server running');
+logger.info('Server running');
 
 // Load the socket.io module
 let socket = require('socket.io');
 global.io = socket(server);
-console.log('Sockets up');
+logger.info('Sockets up');
 
 
 // Handle new connections.
 io.sockets.on('connection', (socket) => {
-    console.log('Accepting a new client with socket id ' + socket.id);
+    logger.info('Accepting a new client with socket id ' + socket.id);
 
     // Handle when a client is ready to play the game
     socket.on('ready', () => {
@@ -36,7 +54,7 @@ io.sockets.on('connection', (socket) => {
 
     // Handle when a client wants to leave a room
     socket.on('leave', () => {
-        console.log('Client is leaving');
+        logger.info('Client is leaving');
         master.leave(socket.id);
     });
 
@@ -47,7 +65,7 @@ io.sockets.on('connection', (socket) => {
 
     // Handle disconnects
     socket.on('disconnect', () => {
-        console.log('Server has detected a disconnect');
+        logger.info('Server has detected a disconnect');
         master.leave(socket.id);
     });
 });

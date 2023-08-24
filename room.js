@@ -23,18 +23,18 @@ module.exports = class Room {
 
     // Register a new player in this room provided its socket id
     register(socketId) {
-        console.log('Registering socket id ' + socketId);
+        logger.debug('Trying to register socket id ' + socketId + ' in room ' + this.id);
         if (!this.isFull()) {
             // Decide the player id for this client
             let playerId = this.getAvailableId();
             // Add it to the dictionary
             this.playersInfo[socketId] = new PlayerInfo(playerId);
-            console.log('Socket id ' + socketId + ' has been registered');
+            logger.info('Socket id ' + socketId + ' has been registered in room ' + this.id);
 
             // If the room is now full, it's a good time to decide a turn.
             // The turn will be random
             if (this.isFull()) {
-                console.log('Room is full. Telling players to begin playing');
+                logger.info('Room ' + this.id + ' is full. Telling players to begin playing');
                 this.turn = Math.random() < 0.5 ? 1 : 2;
                 this.initialTurn = this.turn;
                 this.playing = true;
@@ -49,13 +49,13 @@ module.exports = class Room {
                 });
             }
             else {
-                console.log('Telling the player to wait');
+                logger.info('Telling the player to wait');
                 io.to(socketId).emit('wait');
             }
             return true;
         }
         else {
-            console.log('Cannot register player in this room because it\'s full');
+            logger.debug('Cannot register client in room ' + this.id + ' because it is full');
             return false;
         }
     }
@@ -64,14 +64,16 @@ module.exports = class Room {
     unregister(socketId) {
         // Return early if the client does not belong to the room
         if (!this.isRegistered(socketId)) {
-            console.log('Client does not belong to this room');
+            logger.debug('Client ' + socketId + ' does not belong to room ' + this.id);
             return false;
         }
 
         // The room has to dissolve, so inform the other player
+        logger.info('Room ' + this.id + ' is dissolving');
         for (let playerSocketId of this.getSocketIds()) {
             if (playerSocketId != socketId) {
                 // This is the other player
+                logger.info('Informing player ' + socketId + ' that the room has dissolved')
                 io.to(playerSocketId).emit('leave');
             }
         }
@@ -83,7 +85,7 @@ module.exports = class Room {
     again(socketId) {
         // Return early if the client does not belong to the room
         if (!this.isRegistered(socketId)) {
-            console.log('Client does not belong to this room');
+            logger.debug('Client ' + socketId + ' does not belong to room ' + this.id);
             return false;
         }
 
@@ -105,27 +107,27 @@ module.exports = class Room {
     clicked(socketId, col) {
         // Return early if the client does not belong to the room
         if (!this.isRegistered(socketId)) {
-            console.log('Client does not belong to this room');
+            logger.debug('Client ' + socketId + ' does not belong to room ' + this.id);
             return false;
         }
 
         // Check this room is playing
         if (!this.playing) {
-            console.log('Ignoring click: room is not playing');
+            logger.debug('Ignoring click: room is not playing');
             return true;
         }
 
         // Check it's the correct turn
         let playerId = this.playersInfo[socketId].getPlayerId();
         if (this.turn != playerId) {
-            console.log('Ignoring click: not the turn of this player');
+            logger.debug('Ignoring click: not the turn of this player');
             return true;
         }
 
         // Pass the click to the grid, who will decide if there is an update or not
         let disc = this.grid.clicked(playerId, col);
         if (disc) {
-            console.log('A disc update needs to be sent');
+            logger.info('A disc update needs to be sent in room ' + this.id);
             this.send('addDisc', disc);
 
             // Update the turn in master.
@@ -135,6 +137,7 @@ module.exports = class Room {
             // Check for win
             let winnerId = this.grid.checkWin();
             if (winnerId != null) {
+                logger.info('Player ' + winnerId + ' has won in room ' + this.id);
                 let winnerSocketId = this.getSocketId(winnerId);
                 this.playersInfo[winnerSocketId].addGameWon();
                 this.getSocketIds().forEach(socketId => {

@@ -13,14 +13,14 @@ module.exports = class Grid {
     // Return the new disc object to send to the clients if the click on the specified column was valid.
     // If not, return null
     clicked(playerId, col) {
-        console.log('Player ' + playerId + ' clicked on column ' + col);
+        logger.debug('Player ' + playerId + ' clicked on column ' + col);
         let row = this.getNextRow(col);
         if (row != null) {
             this.discs[col][row] = playerId;
             return { playerId: playerId, col: col, row: row };
         }
         else {
-            console.log('Column clicked is full');
+            logger.debug('Column clicked is full');
             return null;
         }
     }
@@ -46,7 +46,6 @@ module.exports = class Grid {
                     let win = this.recursiveWin(j, i, this.discs[j][i], 0, 0, 0);
                     if (win) {
                         let winnerId = this.discs[j][i];
-                        console.log('Player ' + winnerId + ' has won');
                         return winnerId;
                     }
                 }
@@ -97,7 +96,7 @@ module.exports = class Grid {
 
     // Set all the grid of discs to their initial values.
     reset() {
-        console.log('Resetting grid');
+        logger.info('Resetting grid');
         for (let j = 0; j < 7; j++) {
             for (let i = 0; i < 6; i++) {
                 this.discs[j][i] = 0;
