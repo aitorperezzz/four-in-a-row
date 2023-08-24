@@ -19,7 +19,7 @@ module.exports = class Master {
 
         // There is no room available, so create a new one
         console.log('Creating a new room for socket id ' + socketId);
-        this.rooms.push(new Room([socketId]));
+        this.rooms.push(new Room(this.getRoomId(), [socketId]));
     }
 
     // A client has sent a click. The click has already been processed by the client in order
@@ -58,5 +58,27 @@ module.exports = class Master {
             }
         }
         console.log('Warning: client ' + socketId + ' not found in any room wants to play again');
+    }
+
+    // Returns the next id that is not in use by any room, starting from 1
+    getRoomId() {
+        let possibleId = 1;
+        while (true) {
+            // Check if the current id is available
+            let used = false;
+            for (let room of this.rooms) {
+                if (room.id == possibleId) {
+                    used = true;
+                    break;
+                }
+            }
+            // Return it if not in use in any room
+            if (!used) {
+                console.log('Assigning room id ' + possibleId);
+                return possibleId;
+            }
+            // TRy with the next one
+            possibleId++;
+        }
     }
 };

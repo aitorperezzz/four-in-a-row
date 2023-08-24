@@ -14,6 +14,7 @@ let colors = undefined;
 let winnerId = undefined;
 let gamesWon = 0;
 let gamesPlayed = 0;
+let roomId = undefined;
 
 // Objects inside the canvas
 let message = undefined;
@@ -43,6 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.on('begin', (data) => {
         playerId = data.playerId;
         turn = data.turn;
+        roomId = data.roomId;
         console.log('Game begins. I am player ' + playerId + ' and the turn is ' + turn);
         mode = 'play';
         buttonManager.clear();
@@ -321,7 +323,8 @@ function displayMessages() {
 }
 
 function createSubmessage() {
-    return 'You are player ' + playerId + ' (' + gamesWon + '/' + gamesPlayed + ')';
+    return 'You are player ' + playerId + ' (' + gamesWon + '/' + gamesPlayed + ')' +
+        ' [Room ' + roomId + ']';
 }
 
 // Functions for buttons

@@ -2,12 +2,13 @@ let Grid = require('./grid.js');
 let PlayerInfo = require('./playerInfo.js');
 
 module.exports = class Room {
-    constructor(socketIds) {
+    constructor(id, socketIds) {
         this.playersInfo = {};
         this.turn = undefined;
         this.playing = false;
         this.grid = new Grid();
         this.initialTurn = undefined;
+        this.id = id;
 
         // Register the socket ids already provided
         socketIds.forEach(id => {
@@ -42,7 +43,8 @@ module.exports = class Room {
                     io.to(socketId).emit('begin', {
                         playerId: this.playersInfo[socketId].getPlayerId(),
                         socketId: socketId,
-                        turn: this.turn
+                        turn: this.turn,
+                        roomId: this.id
                     });
                 });
             }
